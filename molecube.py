@@ -46,7 +46,7 @@ class Signal:
         for callback in self.observers.values():
             callback(value)
 
-class Point:
+class Point(object):
     def __init__(self, index):
         self.value = None
         self.index = index
@@ -85,8 +85,17 @@ class Point:
     def isSolved(self):
         return self.value != None
 
+    def clone(self):
+        cls = self.__class__
+        clone = cls.__new__(cls)
 
-class Region:
+        clone.value = self.value
+        clone.index = self.index
+        clone.possibleValues = [e for e in self.possibleValues]
+        clone.dirtySignal = Signal()
+        return clone
+
+class Region(object):
     def __init__(self, points, available = range(0, VALUE_COUNT)):
         if (len(points) != len(available)):
             raise ValueError("len(points) = %d, len(available) = %d" % (len(points), len(available)))
@@ -116,8 +125,19 @@ class Region:
             raise ContradictionError("Point %s set to %d, but that value isn't avaliable in region %s" % (point, value, self))
         else:
             self.available[value] -= 1
+    def clone(self, points):
+        cls = self.__class__
+        clone = cls.__new__(cls)
 
-class Cube:
+        clone.dirty = self.dirty
+        clone.points = [points[e.index] for e in self.points]
+        clone.available = self.available.copy()
+        for point in clone.points:
+            if not point.isSolved():
+                point.dirtySignal.subscribe (clone.markDirty)
+        return clone
+
+class Cube(object):
     def __init__(self, points, regions):
         self.points = points
         self.regions = regions
@@ -151,4 +171,12 @@ class Cube:
 
     def __str__(self):
         return "Cube [\n%s\n]" % '\n'.join(map(lambda p: ' ' + str(p), self.points + self.regions))
+
+    def clone(self):
+        cls = self.__class__
+        clone = cls.__new__(cls)
+
+        clone.points = [e.clone() for e in self.points]
+        clone.regions = [e.clone(clone.points) for e in self.regions]
+        return clone
 cube = Cube.createDefault()
