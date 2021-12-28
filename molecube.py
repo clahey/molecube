@@ -97,7 +97,7 @@ class Point(object):
 
 class Region(object):
     def __init__(self, points, available = range(0, VALUE_COUNT)):
-        if (len(points) != len(available)):
+        if (len(points) > len(available)):
             raise ValueError("len(points) = %d, len(available) = %d" % (len(points), len(available)))
         self.dirty = True
         self.points = points
