@@ -103,7 +103,7 @@ class Region(object):
         self.points = points
         self.available = {}
         for value in available:
-            self.available[value] = self.available.get(colorToValue(value), 0) + 1
+            self.available[colorToValue(value)] = self.available.get(colorToValue(value), 0) + 1
         for point in self.points:
             if point.isSolved():
                 self.markSolved(point)
