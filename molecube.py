@@ -53,6 +53,12 @@ class Point:
         self.possibleValues = [True] * VALUE_COUNT
         self.dirtySignal = Signal()
 
+    def __str__(self):
+        possibleValues = [index for (possible, index) in zip(self.possibleValues, range(VALUE_COUNT)) if possible]
+        possibleValuesString = 'possible %s' % (possibleValues)
+        valueString = 'value %s' % (self.value)
+        return 'Point %d, %s' % (self.index, valueString if self.value != None else possibleValuesString)
+
     def setImpossible(self, value):
         value = colorToValue(value)
         self.possibleValues[value] = False
@@ -95,6 +101,10 @@ class Region:
             else:
                 point.dirtySignal.subscribe (self.markDirty)
 
+    def __str__(self):
+        return 'Region unsolved points %s, available %s, dirty %s' % (
+            ' '.join([str(p.index) for p in self.points if not p.isSolved()]),
+            self.available, self.dirty)
     def markDirty(self, change):
         if (change["type"] == ChangeType.COLOR_SET):
             self.markSolved(change["point"])
@@ -139,4 +149,6 @@ class Cube:
                     ]
         return Cube(points, regions)
 
+    def __str__(self):
+        return "Cube [\n%s\n]" % '\n'.join(map(lambda p: ' ' + str(p), self.points + self.regions))
 cube = Cube.createDefault()
