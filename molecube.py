@@ -23,6 +23,9 @@ def colorToValue(colorOrValue):
     else:
         return colorOrValue
 
+class ContradictionError(Exception):
+    pass
+
 class Signal:
     def __init__(self):
         self.observers = {}
