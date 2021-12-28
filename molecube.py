@@ -11,6 +11,10 @@ class Color(Enum):
     RED = 7 # Three edges
     PURPLE = 8 # Three edges
 
+class ChangeType(Enum):
+    COLOR_SET = 0
+    COLOR_IMPOSSIBLE = 1
+
 VALUE_COUNT = 9
 
 def colorToValue(colorOrValue):
@@ -35,9 +39,9 @@ class Signal:
     def unsubscribe(self, id):
         del self.observers[id]
     
-    def trigger(self):
+    def trigger(self, value = None):
         for callback in self.observers.values():
-            callback()
+            callback(value)
 
 class Point:
     def __init__(self, index):
@@ -50,15 +54,21 @@ class Point:
         value = colorToValue(value)
         self.possibleValues[value] = False
         if sum(self.possibleValues) == 1:
-            self.value = self.possibleValues.index(True)
-        self.markDirty()
+            solvedValue = self.possibleValues.index(True)
+            self.value = solvedValue
+            self.dirtySignal.trigger({"type": ChangeType.COLOR_SET, "point": self, "value": solvedValue})
+        else:
+            self.dirtySignal.trigger({"type": ChangeType.COLOR_IMPOSSIBLE, "point": self, "value": value})
 
     def setValue(self, value):
         value = colorToValue(value)
-        self.value = value
-        self.possibleValues = [False] * VALUE_COUNT
-        self.possibleValues[value] = True
-        self.markDirty()
+        if not self.possibleValues[value]:
+            raise ContradictionError("Value %d is not possible at point %s" % (value, self))
+        if not self.isSolved():
+            self.value = value
+            self.possibleValues = [False] * VALUE_COUNT
+            self.possibleValues[value] = True
+            self.dirtySignal.trigger({"type": ChangeType.COLOR_SET, "point": self, "value": value})
 
     def getValue(self):
         return self.value
@@ -66,8 +76,6 @@ class Point:
     def isSolved(self):
         return self.value != None
 
-    def markDirty(self):
-        self.dirtySignal.trigger()
 
 class Region:
     def __init__(self, points, available = range(0, VALUE_COUNT)):
@@ -79,9 +87,22 @@ class Region:
         for value in available:
             self.available[value] = self.available.get(colorToValue(value), 0) + 1
         for point in self.points:
-            point.dirtySignal.subscribe (self.markDirty)
-    def markDirty(self):
+            if point.isSolved():
+                self.markSolved(point)
+            else:
+                point.dirtySignal.subscribe (self.markDirty)
+
+    def markDirty(self, change):
+        if (change["type"] == ChangeType.COLOR_SET):
+            self.markSolved(change["point"])
         self.dirty = True
+
+    def markSolved(self, point):
+        value = point.getValue()
+        if self.available.get(value, 0) == 0:
+            raise ContradictionError("Point %s set to %d, but that value isn't avaliable in region %s" % (point, value, self))
+        else:
+            self.available[value] -= 1
 
 class Cube:
     def __init__(self, points, regions):
